@@ -1,11 +1,23 @@
 import streamlit as st
 import pandas as pd
+import requests
 
-# Load the data
+# Load the data from the API
 @st.cache_data
 def load_data():
-    data = pd.read_csv(r'C:\Users\tan_p\Downloads\ResaleflatpricesbasedonregistrationdatefromJan2017onwards.csv')
-    return data
+    datasetId = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
+    url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=5000"  # Adjust the limit as needed
+    response = requests.get(url)
+    data = response.json()
+    records = data['result']['records']
+    df = pd.DataFrame.from_records(records)
+    
+    # Convert columns to appropriate data types
+    df['resale_price'] = pd.to_numeric(df['resale_price'], errors='coerce')
+    df['lease_commence_date'] = pd.to_numeric(df['lease_commence_date'], errors='coerce')
+    df['month'] = pd.to_datetime(df['month'], errors='coerce')
+    
+    return df
 
 data = load_data()
 
@@ -39,7 +51,6 @@ avg_price_town = data.groupby('town')['resale_price'].mean().sort_values(ascendi
 st.bar_chart(avg_price_town)
 
 st.write('### Resale Price Trends Over Time')
-data['month'] = pd.to_datetime(data['month'])
 price_trends = data.groupby('month')['resale_price'].mean()
 st.line_chart(price_trends)
 
